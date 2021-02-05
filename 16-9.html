@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<script type="text/javascript">
+		
+
+		const websocket = new WebSocket("ws://localhost:9999");
+		var maxG = [3,3];
+		websocket.addEventListener("open",(event)=>{
+			websocket.send(JSON.stringify({"op":"register","args":["physics"]}));
+		});
+		websocket.addEventListener("message",(event)=>{
+			var message = JSON.parse(event.data);
+			if(message.type === "graphic"){
+
+			}
+			else if(message.type === "physics"){
+				let throttlebar = document.querySelector(".throttle-bar");
+				let brakebar = document.querySelector(".brake-bar");
+				let gear = document.querySelector(".gear");
+				let speedometer = document.querySelector(".speedometer");
+				let steeringwheel = document.querySelector(".steering-wheel");
+				throttlebar.style.width = `${100*message.data.gas}%`;
+				brakebar.style.width = `${100*message.data.brake}%`;
+				if(message.data.gear==0)
+					gear.textContent = "R";
+				else if(message.data.gear==1)
+					gear.textContent = "N";
+				else gear.textContent = message.data.gear-1;
+				speedometer.textContent = Math.trunc(message.data.speedKmh);
+				steeringwheel.style.transform = `rotate(${180*message.data.steerAngle}deg)`;
+				for(let i=0;i<4;i++){
+					setWheel(i,message.data.tyreTempO[i],message.data.tyreTempM[i],message.data.tyreTempI[i]);
+				}
+
+				if(message.data.accG[0]>maxG[0])
+					maxG[0] = message.data.accG[0];
+				if(message.data.accG[2]>maxG[1])
+					maxG[1] = message.data.accG[2];
+				//console.log(message.data.accG[0],message.data.accG[2])
+				let acceltext = document.querySelector(`.acceleration-text`);
+				acceltext.textContent = Math.pow(Math.pow(message.data.accG[0],2)+Math.pow(message.data.accG[2],2.0),.5).toFixed(1)+'G';
+				let accelpoint = document.querySelector(`.acceleration-point`);
+				
+				accelpoint.style.left = `${45+(45/maxG[0]*message.data.accG[0])}%`;
+				accelpoint.style.top = `${45+(45/maxG[1]*message.data.accG[2])}%`;
+
+			}
+		});
+		function setWheel(wheel,outertemp,centertemp,innertemp){
+			let inner, outer;
+			let middle = document.querySelector(`.wheel-info[data-wheel-id='${wheel}']>.wheel-container>.wheel-mid`);
+			let text = document.querySelectorAll(`.wheel-info[data-wheel-id='${wheel}']>.wheel-temps>.temp`);
+			//if(wheel==1||wheel==3){
+				inner = document.querySelector(`.wheel-info[data-wheel-id='${wheel}']>.wheel-container>.wheel-left`);
+				outer = document.querySelector(`.wheel-info[data-wheel-id='${wheel}']>.wheel-container>.wheel-right`);
+				text[0].textContent = Math.trunc(innertemp);
+				text[1].textContent = Math.trunc(outertemp);
+			/*}
+			else{
+				outer = document.querySelector(`.wheel-info[data-wheel-id='${wheel}']>.wheel-container>.wheel-left`);
+				inner = document.querySelector(`.wheel-info[data-wheel-id='${wheel}']>.wheel-container>.wheel-right`);
+				text[0].textContent = Math.trunc(outertemp);
+				text[1].textContent = Math.trunc(innertemp);
+			}*/
+			text[2].textContent = Math.trunc(centertemp);
+			inner.style.backgroundColor = getColorByTemp(innertemp);
+			middle.style.backgroundColor = getColorByTemp(centertemp);
+			outer.style.backgroundColor = getColorByTemp(outertemp);
+		}
+		function getColorByTemp(temp){
+			let hue;
+			if(temp < 70)
+				hue = 240;
+			else if(temp>130)
+				hue = 0;
+			else hue = 240-(4*(temp-70));
+			return `hsl(${hue}, 100%, 50%)`;
+		}
+	</script>
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+	<div class="panel-container">
+		<div class="speed-panel" >
+			<div class="gear-speed-container">
+				<div class="gear">N</div>
+				<div class="speedometer">0</div>
+			</div>
+			<div class="throttle-container">
+				<div class="throttle-bar">
+				</div>
+			</div>
+			<div class="brake-container">
+				<div class="brake-bar">
+				</div>
+			</div>
+			<div class="steering-wheel">
+			</div>
+		</div>
+		<div class="tyre-temp-panel" >
+			<div class="front-axis-container">
+				<div class="wheel-info" data-wheel-id="0">
+					<div class="wheel-container" >
+						<div class="wheel-left"></div>
+						<div class="wheel-mid"></div>
+						<div class="wheel-right"></div>
+					</div>
+					<div class="wheel-temps">
+						<div class="temp">0</div>
+						<div class="temp">0</div>
+						<div class="temp-break"></div>
+						<div class="temp">0</div>
+					</div>
+				</div>
+				<div class="wheel-info" data-wheel-id="1">
+					<div class="wheel-container">
+						<div class="wheel-left"></div>
+						<div class="wheel-mid"></div>
+						<div class="wheel-right"></div>
+					</div>
+					<div class="wheel-temps">
+						<div class="temp">0</div>
+						<div class="temp">0</div>
+						<div class="temp-break"></div>
+						<div class="temp">0</div>
+					</div>
+				</div>
+			</div>
+			<div class="rear-axis-container">
+				<div class="wheel-info" data-wheel-id="2">
+					<div class="wheel-container">
+						<div class="wheel-left"></div>
+						<div class="wheel-mid"></div>
+						<div class="wheel-right"></div>
+					</div>
+					<div class="wheel-temps">
+						<div class="temp">0</div>
+						<div class="temp">0</div>
+						<div class="temp-break"></div>
+						<div class="temp">0</div>
+					</div>
+				</div>
+				<div class="wheel-info" data-wheel-id="3">
+					<div class="wheel-container">
+						<div class="wheel-left"></div>
+						<div class="wheel-mid"></div>
+						<div class="wheel-right"></div>
+					</div>
+					<div class="wheel-temps">
+						<div class="temp">0</div>
+						<div class="temp">0</div>
+						<div class="temp-break"></div>
+						<div class="temp">0</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="acceleration-panel">
+			<div class="acceleration-background">
+				<div class="acceleration-point"></div>
+			</div>
+			<div class="acceleration-text">0.0G</div>
+		</div>
+	</div>
+</body>
+</html>
